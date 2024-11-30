@@ -73,20 +73,30 @@ app.patch("/jokes/:id", (request, response) => {
 //7. DELETE Specific joke
 app.delete("/jokes/:id", (request, response) => {
   const ORIGINAL_JOKE = JOKES[request.params.id - 1];
-
-  JOKES.splice(request.params.id - 1, 1);
-  response.send(
-    `joke with details ${JSON.stringify(
-      ORIGINAL_JOKE
-    )} has been deleted succesfully!`
-  );
+  if (request.params.id <= JOKES.length) {
+    JOKES.splice(request.params.id - 1, 1);
+    response.send(
+      `joke with details ${JSON.stringify(
+        ORIGINAL_JOKE
+      )} has been deleted succesfully!`
+    );
+  } else {
+    response
+      .status(404)
+      .json({
+        error: `Joke with the id ${request.params.id} not found. No jokes were deleted`,
+      });
+  }
 });
 
 //8. DELETE All jokes
-app.delete("/jokes/delete/all", (request, response) => {
-  JOKES.splice(0, JOKES.length);
+app.delete("/all", (request, response) => {
+  if (request.query.key === masterKey){JOKES.splice(0, JOKES.length);
   response.send("All Jokes Have Been Deleted.");
-});
+} else {
+  response.status(404).json({error: "You are not authorized to perform this action"})
+}
+  });
 
 app.listen(port, () => {
   console.log(`Successfully started server on port ${port}.`);
