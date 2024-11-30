@@ -8,6 +8,11 @@ const masterKey = "4VGP2DN-6EWM4SJ-N6FGRHV-Z3PR3TT";
 app.use(bodyParser.urlencoded({ extended: true }));
 
 //1. GET a random joke
+app.get("/random", (request, response) => {
+  const RANDOM_JOKE = JOKES[Math.floor(Math.random() * JOKES.length)];
+  const RANDOM_JOKE_DATA = JSON.stringify(RANDOM_JOKE);
+  response.send(RANDOM_JOKE_DATA);
+});
 
 //2. GET a specific joke
 
@@ -27,7 +32,7 @@ app.listen(port, () => {
   console.log(`Successfully started server on port ${port}.`);
 });
 
-var jokes = [
+const JOKES = [
   {
     id: 1,
     jokeText:
