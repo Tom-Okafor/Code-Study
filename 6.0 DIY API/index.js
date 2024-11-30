@@ -26,22 +26,67 @@ app.get("/jokes/:id", (request, response) => {
 
 //3. GET a jokes by filtering on the joke type
 app.get("/filter", (request, response) => {
-  const JOKE_TYPE = JOKES.filter((jokes) => {
-    return jokes.jokeType === request.query.type;
-  });
+  const JOKE_TYPE = JOKES.filter(
+    (jokes) => jokes.jokeType === request.query.type
+  );
 
   response.json(JOKE_TYPE);
 });
 
 //4. POST a new joke
+app.post("/jokes", (request, response) => {
+  const JOKE_TEXT = request.body.text,
+    JOKE_TYPE = request.body.type;
+  const ID = JOKES[JOKES.length - 1].id + 1;
+  const NEW_JOKE = { id: ID, jokeText: JOKE_TEXT, jokeType: JOKE_TYPE };
+  JOKES.push(NEW_JOKE);
+  response.json(NEW_JOKE);
+});
 
 //5. PUT a joke
+app.put("/jokes/:id", (request, response) => {
+  const JOKE_TEXT = request.body.text,
+    JOKE_TYPE = request.body.type;
+  const NEW_JOKE = {
+    id: request.params.id,
+    jokeText: JOKE_TEXT,
+    jokeType: JOKE_TYPE,
+  };
+  JOKES.splice(request.params.id - 1, 1, NEW_JOKE);
+  response.json(NEW_JOKE);
+});
 
 //6. PATCH a joke
+app.patch("/jokes/:id", (request, response) => {
+  const JOKE_TEXT = request.body.text,
+    JOKE_TYPE = request.body.type;
+  const ORIGINAL_JOKE = JOKES[request.params.id - 1];
+  if (JOKE_TEXT) {
+    ORIGINAL_JOKE.jokeText = JOKE_TEXT;
+  }
+  if (JOKE_TYPE) {
+    ORIGINAL_JOKE.jokeType = JOKE_TYPE;
+  }
+  response.json(ORIGINAL_JOKE);
+});
 
 //7. DELETE Specific joke
+app.delete("/jokes/:id", (request, response) => {
+  const ORIGINAL_JOKE = JOKES[request.params.id - 1];
+
+  JOKES.splice(request.params.id - 1, 1);
+  response.send(
+    `joke with details ${JSON.stringify(
+      ORIGINAL_JOKE
+    )} has been deleted succesfully!`
+  );
+});
 
 //8. DELETE All jokes
+app.delete("/jokes/delete/all", (request, response) => {
+  JOKES.splice(0, JOKES.length);
+  response.send("All Jokes Have Been Deleted.");
+});
 
 app.listen(port, () => {
   console.log(`Successfully started server on port ${port}.`);
