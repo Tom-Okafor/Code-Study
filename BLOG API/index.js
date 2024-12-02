@@ -1,8 +1,8 @@
-import express from "express";
+import express, { response } from "express";
 import bodyParser from "body-parser";
 
 const app = express();
-const port = 4000;
+const port = 1510;
 
 // In-memory data store
 let posts = [
@@ -41,14 +41,45 @@ app.use(bodyParser.urlencoded({ extended: true }));
 //Write your code here//
 
 //CHALLENGE 1: GET All posts
+app.get("/posts", (request, response) => {
+  response.json(posts);
+});
 
 //CHALLENGE 2: GET a specific post by id
+app.get("/posts/:id", (request, response) => {
+  const POST_INDEX = posts.findIndex((post) => post.id === +request.params.id);
+  response.json(posts[POST_INDEX]);
+});
 
 //CHALLENGE 3: POST a new post
+app.post("/posts", (request, response) => {
+  const NEW_POST = {
+    id: ++lastId,
+    title: request.body.title,
+    content: request.body.content,
+    author: request.body.author,
+    date: new Date(),
+  };
+  console.log(lastId);
+  posts.push(NEW_POST);
+  response.json(posts);
+});
 
 //CHALLENGE 4: PATCH a post when you just want to update one parameter
+app.patch("/posts/:id", (request, response) => {
+  const POST_TO_PATCH = posts[request.params.id - 1];
+  POST_TO_PATCH.title = request.body.title || POST_TO_PATCH.title;
+  POST_TO_PATCH.content = request.body.content || POST_TO_PATCH.content;
+  POST_TO_PATCH.author = request.body.author || POST_TO_PATCH.author;
+  posts[request.params.id - 1] = POST_TO_PATCH;
+  response.json(posts);
+});
 
 //CHALLENGE 5: DELETE a specific post by providing the post id.
+app.delete("/posts/:id", (request, response) => {
+  posts.splice(request.params.id - 1, 1);
+  response.json(posts)
+});
 
 app.listen(port, () => {
   console.log(`API is running at http://localhost:${port}`);
