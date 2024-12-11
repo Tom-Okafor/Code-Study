@@ -23,26 +23,12 @@ app.use(express.static("public"));
 app.get("/", async (req, res) => {
   //Write your code here.
   try {
-    let response = await DATABASE.query(
-      "SELECT country_code FROM visited_countries"
-    );
-    visited_countries = response.rows;
+    await getVisitedCountries();
   } catch (error) {
     if (error) {
       console.error(error);
     }
   }
-  function extractCountries() {
-    let countryArray = [];
-
-    visited_countries.forEach((country) => {
-      countryArray.push(country.country_code);
-    });
-    return countryArray;
-  }
-  visited_countries = extractCountries();
-
-  console.log(visited_countries);
 
   res.render("index.ejs", {
     total: visited_countries.length,
@@ -52,64 +38,76 @@ app.get("/", async (req, res) => {
 
 app.post("/add", addVisitedCountry);
 
-async function getCountryCode(country) {
-  let countryCode;
-  try {
-    const RESPONSE = await DATABASE.query(
-      "SELECT country_code FROM countries WHERE country_name LIKE $1",
-      [country + "%"]
-    );
-    countryCode = RESPONSE.rows;
-  } catch (error) {
-    if (error) {
-      console.error(error);
+async function addVisitedCountry(request, response) {
+  async function getCountryCode(country) {
+    let countryCode;
+    try {
+      const RESPONSE = await DATABASE.query(
+        "SELECT country_code FROM countries WHERE country_name LIKE $1",
+        [country + "%"]
+      );
+      countryCode = RESPONSE.rows;
+      await getVisitedCountries();
+      if (visited_countries.includes(countryCode[0].country_code)) {
+        console.log("incluessss");
+        response.render("index.ejs", {
+          total: visited_countries.length,
+          countries: visited_countries,
+          error: "This country has already been added",
+        });
+      } else {
+        return countryCode[0].country_code;
+      }
+    } catch (error) {
+      if (error) {
+        getVisitedCountries();
+        response.render("index.ejs", {
+          total: visited_countries.length,
+          countries: visited_countries,
+          error: "The country you've entered does not exist.",
+        });
+      }
     }
   }
-  return countryCode[0].country_code;
-}
-
-async function addVisitedCountry(request, response) {
-  const COUNTRY = request.body.country;
-  const COUNTRY_CODE = await getCountryCode(COUNTRY);
-  let visitedCountries;
+  let country = request.body.country;
+  function formatCountry() {
+    let letter = country.slice(0, 1);
+    letter = letter.toUpperCase();
+    country = country.slice(1, country.length);
+    letter += country;
+    return letter;
+  }
+  country = formatCountry();
+  const COUNTRY_CODE = await getCountryCode(country);
 
   try {
     await DATABASE.query(
       "INSERT INTO visited_countries (country_code) VALUES ($1)",
       [COUNTRY_CODE]
     );
-    const RESPONSE = await DATABASE.query(
-      "SELECT country_code FROM visited_countries"
-    );
-    visitedCountries = RESPONSE.rows;
-    function extractCountries() {
-      let countryArray = [];
-
-      visitedCountries.forEach((country) => {
-        countryArray.push(country.country_code);
-      });
-      return countryArray;
-    }
-    visitedCountries = extractCountries();
-
-    response.render("index.ejs", {
-      total: visitedCountries.length,
-      countries: visitedCountries,
-    });
+    response.redirect("/");
   } catch (error) {
     if (error) {
       console.error(error);
-      let errorMessage =
-        "It seems the country you've enetered is not valid. Please, recheck and try again.";
-      response.render("index.ejs", {
-        total: visitedCountries.length,
-        countries: visitedCountries,
-        error: errorMessage,
-      });
     }
   }
 }
 
+async function getVisitedCountries() {
+  const GET_COUNTRY_CODES = await DATABASE.query(
+    "SELECT country_code FROM visited_countries"
+  );
+  visited_countries = GET_COUNTRY_CODES.rows;
+  visited_countries = extractCountries();
+}
+function extractCountries() {
+  let countryArray = [];
+
+  visited_countries.forEach((country) => {
+    countryArray.push(country.country_code);
+  });
+  return countryArray;
+}
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
