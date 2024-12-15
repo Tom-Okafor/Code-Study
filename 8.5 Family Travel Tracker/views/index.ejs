@@ -12,7 +12,7 @@
   <form class="tab-view tab-view-height-auto" action="/user" method="post">
     <% users.forEach(function(user) { %>
       <input type="submit" name="user" value="<%= user.id %>" id="<%= user.id %>">
-      <label for="<%= user.id %>" style="background-color: <%= user.color %>;">
+      <label for="<%= user.id %>" style="background-color: <%= user.color %>">
         <%= user.name %>
       </label>
       <% }); %>
@@ -24,8 +24,13 @@
 
   <form action="/add" method="post">
     <input type="text" name="country" autofocus placeholder="<%= locals.error ? error :  'Enter country name'%>">
-    <button type="submit" style="background-color: <%= color %>;">Add</button>
+    <button type="submit" style="background-color: <%= color %>">Add</button>
   </form>
+
+  <p class="identity" style="color: <%=color%>">
+    <%=users[INDEX].name%>'s Visited Countries
+  </p>
+
 
   <section class="ag-canvas">
     <svg class="ag-canvas_svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"

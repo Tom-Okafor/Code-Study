@@ -51,6 +51,12 @@ body {
   transition: 0.5s;
 }
 
+.identity {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+}
+
 @media screen and (max-width: 767px) {
   .ag-canvas {
     -webkit-flex-flow: row wrap;
