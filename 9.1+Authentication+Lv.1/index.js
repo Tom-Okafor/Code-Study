@@ -35,12 +35,25 @@ app.get("/register", (req, res) => {
 app.post("/register", async (req, res) => {
   const EMAIL = req.body.username;
   const PASSWORD = req.body.password;
-  let newUser = await DATABASE.query(
-    "INSERT INTO users (email, password) VALUES($1, $2) RETURNING *",
-    [EMAIL, PASSWORD]
-  );
-  newUser = newUser.rows;
-  console.log(newUser);
+  try {
+    let checkIfUserHasBeenRegistered = await DATABASE.query(
+      "SELECT * FROM users WHERE email = $1",
+      [EMAIL]
+    );
+    if (checkIfUserHasBeenRegistered.rows.length) {
+      res.send("This email has already registered.");
+    } else {
+      let newUser = await DATABASE.query(
+        "INSERT INTO users (email, password) VALUES($1, $2) RETURNING *",
+        [EMAIL, PASSWORD]
+      );
+      newUser = newUser.rows;
+      console.log(newUser);
+      res.render("secrets.ejs");
+    }
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 app.post("/login", async (req, res) => {
@@ -52,11 +65,8 @@ app.post("/login", async (req, res) => {
       [EMAIL]
     );
     loginPassword = loginPassword.rows;
-    console.log(loginPassword);
-    console.log(PASSWORD);
-
     if (loginPassword[0].password === PASSWORD) {
-      res.send("CORRECT!");
+      res.render("secrets.ejs");
     } else {
       res.send("OOPS! TRY AGAIN");
     }
