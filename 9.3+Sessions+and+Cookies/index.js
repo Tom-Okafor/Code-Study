@@ -2,22 +2,36 @@ import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+import session from "express-session";
+import passport from "passport";
+import { Strategy } from "passport-local";
 
 const app = express();
 const port = 3000;
 const saltRounds = 10;
-
+dotenv.config();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
-
-const db = new pg.Client({
+app.use(
+  session({
+    secret: "MYSPECIALSECRET",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 3,
+    },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+const db = new pg.Pool({
   user: "postgres",
   host: "localhost",
   database: "secrets",
-  password: "123456",
+  password: process.env.password,
   port: 5432,
 });
-db.connect();
 
 app.get("/", (req, res) => {
   res.render("home.ejs");
@@ -31,6 +45,13 @@ app.get("/register", (req, res) => {
   res.render("register.ejs");
 });
 
+app.get("/secrets", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render("secrets.ejs");
+  } else {
+    res.redirect("/login");
+  }
+});
 app.post("/register", async (req, res) => {
   const email = req.body.username;
   const password = req.body.password;
@@ -49,11 +70,18 @@ app.post("/register", async (req, res) => {
           console.error("Error hashing password:", err);
         } else {
           console.log("Hashed Password:", hash);
-          await db.query(
-            "INSERT INTO users (email, password) VALUES ($1, $2)",
+          const result = await db.query(
+            "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
             [email, hash]
           );
-          res.render("secrets.ejs");
+          const user = result.rows[0];
+          req.login(user, (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              res.redirect("/secrets");
+            }
+          });
         }
       });
     }
@@ -62,36 +90,49 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
-  const email = req.body.username;
-  const loginPassword = req.body.password;
+app.post(
+  "/login",
+  passport.authenticate("local", {
+    successRedirect: "/secrets",
+    failureRedirect: "/login",
+  })
+);
 
-  try {
-    const result = await db.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      const storedHashedPassword = user.password;
-      bcrypt.compare(loginPassword, storedHashedPassword, (err, result) => {
-        if (err) {
-          console.error("Error comparing passwords:", err);
-        } else {
-          if (result) {
-            res.render("secrets.ejs");
+passport.use(
+  new Strategy(async function verify(username, password, done) {
+    try {
+      const result = await db.query("SELECT * FROM users WHERE email = $1", [
+        username,
+      ]);
+      if (result.rows.length > 0) {
+        const user = result.rows[0];
+        const storedHashedPassword = user.password;
+        bcrypt.compare(password, storedHashedPassword, (err, result) => {
+          if (err) {
+            return done(err);
           } else {
-            res.send("Incorrect Password");
+            if (result) {
+              return done(null, true);
+            } else {
+              return done(null, true);
+            }
           }
-        }
-      });
-    } else {
-      res.send("User not found");
+        });
+      } else {
+        return done("User not found");
+      }
+    } catch (err) {
+      return done(err);
     }
-  } catch (err) {
-    console.log(err);
-  }
+  })
+);
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((user, done) => {
+  done(null, user);
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server running on port http://localhost:${port}`);
 });
