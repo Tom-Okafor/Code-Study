@@ -4,6 +4,7 @@ import pg from "pg";
 import bcrypt from "bcrypt";
 import passport from "passport";
 import { Strategy } from "passport-local";
+import GoogleStrategy from "passport-google-oauth2";
 import session from "express-session";
 import env from "dotenv";
 
@@ -64,6 +65,20 @@ app.get("/secrets", (req, res) => {
     res.redirect("/login");
   }
 });
+
+app.get(
+  "/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })
+);
+app.get(
+  "/auth/google/secrets",
+  passport.authenticate("google", {
+    successRedirect: "/secrets",
+    failureRedirect: "/login",
+  })
+);
 
 app.post(
   "/login",
@@ -137,6 +152,36 @@ passport.use(
       console.log(err);
     }
   })
+);
+
+passport.use(
+  "google",
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:3000/auth/google/secrets",
+      userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+    },
+    async function (accessToken, refreshToken, profile, done) {
+      try {
+        const RESULT = await db.query("SELECT * FROM users WHERE email = $1", [
+          profile.email,
+        ]);
+        if (RESULT.rows.length === 0) {
+          const NEW_USER = await db.query(
+            "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
+            [profile.email, "google"]
+          );
+          return done(null, NEW_USER.rows[0]);
+        } else {
+          return done(null, RESULT.rows[0]);
+        }
+      } catch (error) {
+        return done(error);
+      }
+    }
+  )
 );
 
 passport.serializeUser((user, cb) => {
